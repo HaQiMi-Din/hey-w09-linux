@@ -72,4 +72,23 @@ assert old in s, "dsi_display.c patch anchor not found"
 open(p, 'w').write(s.replace(old, new))
 print("  OK dsi_display.c patched")
 PYEOF
+echo ">> [patch 5/5] DTS: 修复 pm7250b 变体与 pmi632 的重复 label (smb5_vbus/bcl_soc)"
+python3 - <<'PYEOF'
+def patch(p, subs):
+    s = open(p).read()
+    for old, new in subs:
+        assert old in s, f"anchor not found in {p}: {old[:50]!r}"
+        s = s.replace(old, new)
+    open(p, 'w').write(s)
+    print(f"  OK {p}")
+
+patch('arch/arm64/boot/dts/vendor/qcom/pm7250b.dtsi', [
+    ('bcl_soc:bcl-soc {', 'pm7250b_bcl_soc:bcl-soc {'),
+    ('thermal-sensors = <&bcl_soc>', 'thermal-sensors = <&pm7250b_bcl_soc>'),
+])
+patch('arch/arm64/boot/dts/vendor/qcom/khaje-idp-pm7250b.dtsi', [
+    ('smb5_vbus: qcom,smb5-vbus {', 'pm7250b_smb5_vbus: qcom,smb5-vbus {'),
+    ('vbus-supply = <&smb5_vbus>', 'vbus-supply = <&pm7250b_smb5_vbus>'),
+])
+PYEOF
 echo ">> vendor patches done"
