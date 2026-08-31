@@ -9,7 +9,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y pahole binutils git wget unzip p7zip-full make gcc-aarch64-linux-gnu libelf-dev dwarves
+          sudo apt install -y pahole binutils git wget unzip p7zip-full make gcc-aarch64-linux-gnu libelf-dev dwarves tree
 
       - name: Setup NDK r27d (cached)
         uses: Ylarod/setup-ndk-clang@v1
@@ -22,19 +22,19 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Download kernel-source.rar from release
-        run: |
-          gh release download --pattern "kernel-source.rar" -O kernel-source.rar
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Extract kernel source (7z)
         run: 7z x kernel-source.rar -okernel-src -y
+
+      # 新增：打印目录结构，排查嵌套文件夹
+      - name: Show extracted file tree
+        run: tree -L 3 kernel-src
 
       - name: Build vmlinux with DWARF debug info
         working-directory: ./kernel-src
         run: |
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- vendor/bengal_defconfig
+          ls -l arch/arm64/configs/
+          ls -l vendor/ 2>/dev/null || echo "vendor folder not exists!"
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- bengal_defconfig
           scripts/config --set-val DEBUG_INFO y
           scripts/config --set-val DEBUG_INFO_DWARF4 y
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc) vmlinux
