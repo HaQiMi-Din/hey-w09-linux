@@ -9,7 +9,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y pahole binutils git wget unzip unrar-nonfree make gcc-aarch64-linux-gnu libelf-dev dwarves
+          sudo apt install -y pahole binutils git wget unzip p7zip-full make gcc-aarch64-linux-gnu libelf-dev dwarves
 
       - name: Setup NDK r27c (cached, fast)
         uses: Ylarod/setup-ndk-clang@v1
@@ -28,8 +28,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract kernel source
-        run: unrar x -o+ kernel-source.rar kernel-src
+      - name: Extract kernel source (use 7z instead of unrar)
+        run: 7z x kernel-source.rar -okernel-src -y
 
       - name: Build vmlinux with DWARF debug info
         working-directory: ./kernel-src
