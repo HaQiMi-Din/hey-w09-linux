@@ -1,80 +1,78 @@
-name: Build HEY-W09 Debian Linux (官方4.19)
+name: Build GhostLock for HEY-W09
 on:
-  push:
-    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
-    timeout-minutes: 240
+    runs-on: ubuntu-22.04-large
     steps:
-      - name: Checkout
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y pahole binutils git wget unzip unrar-nonfree make gcc-aarch64-linux-gnu libelf-dev dwarves
+
+      - name: Download NDK r27c
+        run: |
+          wget https://dl.google.com/android/repository/android-ndk-r27c-linux.zip
+          unzip -q android-ndk-r27c-linux.zip
+          echo "NDK_ROOT=$PWD/android-ndk-r27c" >> $GITHUB_ENV
+
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Install build dependencies
+      - name: Download kernel-source.rar from release
         run: |
-          sudo apt-get update -y
-          sudo apt-get install -y \
-            clang-14 lld-14 \
-            binutils-aarch64-linux-gnu gcc-aarch64-linux-gnu \
-            flex bison bc cpio xz-utils zstd bzip2 \
-            libssl-dev libncurses-dev \
-            device-tree-compiler \
-            mkbootimg debootstrap qemu-user-static \
-            busybox-static dpkg-dev wget p7zip-full
-          # debootstrap 认识 Debian bookworm 发行版代号
-          sudo ln -sf /usr/share/debootstrap/scripts/sid /usr/share/debootstrap/scripts/bookworm 2>/dev/null || true
+          gh release download --pattern "kernel-source.rar" -O kernel-source.rar
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Restore kernel build cache
-        id: cache-kernel
-        uses: actions/cache@v4
-        with:
-          path: |
-            out/kernel
-            out/modules-stage
-          key: hey-w09-k419-clang-${{ hashFiles('scripts/build-kernel-official.sh', 'scripts/patch-vendor-419.sh') }}
+      - name: Extract kernel source
+        run: unrar x -o+ kernel-source.rar kernel-src
 
-      - name: Fetch official 4.19 kernel source
-        run: bash scripts/fetch-kernel-official.sh
+      - name: Build vmlinux with DWARF debug info
+        working-directory: ./kernel-src
+        run: |
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- vendor/bengal_defconfig
+          scripts/config --set-val DEBUG_INFO y
+          scripts/config --set-val DEBUG_INFO_DWARF4 y
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc) vmlinux
 
-      - name: Build ARM64 kernel (clang)
-        run: bash scripts/build-kernel-official.sh
+      - name: Dump struct offsets with pahole
+        working-directory: ./kernel-src
+        run: |
+          pahole -C task_struct vmlinux > ../task_struct.txt
+          pahole -C cred vmlinux > ../cred.txt
+          pahole -C rt_mutex_waiter vmlinux > ../rt_mutex_waiter.txt
+          nm vmlinux | grep -E "init_task|init_cred" > ../kallsyms.txt
 
-      - name: Save kernel build cache
-        if: steps.cache-kernel.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            out/kernel
-            out/modules-stage
-          key: hey-w09-k419-clang-${{ hashFiles('scripts/build-kernel-official.sh', 'scripts/patch-vendor-419.sh') }}
+      - name: Clone GhostLock base source
+        run: git clone https://github.com/p2p3p/GhostLock-for-OnePlus.git ghostlock
 
-      - name: Build Debian arm64 rootfs (GNOME + Firefox)
-        run: bash scripts/build-rootfs.sh
+      - name: Create device directory & generate offsets.h template
+        run: |
+          mkdir -p ghostlock/src/devices/hey_w09
+          cat > ghostlock/src/devices/hey_w09/offsets.h <<'EOF'
+          /* Auto-generated for HEY-W09 SM6225 4.19 */
+          #ifndef __OFFSETS_HEY_W09_H__
+          #define __OFFSETS_HEY_W09_H__
+          // Need manually fill values from exported txt files
+          #define KIMAGE_TEXT_BASE         0xffffffc008000000ULL
+          #define P0_PAGE_OFFSET           0xffffffc000000000ULL
+          #endif
+          EOF
 
-      - name: Build initramfs (busybox + init + WiFi)
-        run: bash scripts/build-initramfs.sh
-
-      - name: Build boot.img
-        run: bash scripts/build-bootimg.sh
-
-      - name: Assemble & compress release
-        run: bash scripts/assemble.sh
-
-      - name: Show output tree
-        run: find out -maxdepth 2 -type f -exec ls -lh {} \;
+      - name: Compile ghostlock exp binary
+        working-directory: ./ghostlock
+        run: |
+          export NDK_ROOT=${{ env.NDK_ROOT }}
+          mkdir -p build/bin
+          make clean
+          make TARGET_DEVICE=hey_w09
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: hey-w09-debian
-          path: out/
-          if-no-files-found: error
-
-      - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: out/*
-          generate_release_notes: true
+          name: hey-w09-ghostlock-output
+          path: |
+            ghostlock/build/bin/ghostlock
+            *.txt
