@@ -9,30 +9,49 @@ KERNEL_IMG="$OUT/kernel/Image.gz"
 RAMDISK="$OUT/initrd.cpio.gz"
 BOOT_IMG="$OUT/boot.img"
 
-# 选择 DTB (mainline: sm6225-lenovo-tb128fu.dtb; 官方 4.19: khaje dtb), 没有就用目录下第一个
+# 选择 DTB: 优先 khaje 基础 DTB
 DTB=""
 for cand in \
-    "$OUT/kernel/dtbs/qcom/sm6225-lenovo-tb128fu.dtb" \
-    "$OUT/kernel/dtbs/sm6225-lenovo-tb128fu.dtb" \
-    "$OUT/kernel/dtbs/qcom/khaje-hey.dtb" \
-    "$OUT/kernel/dtbs/qcom/khaje-Hey_W09_VA.dtb" \
-    "$OUT/kernel/dtbs/qcom/khaje-Hey-W09.dtb" \
-    "$OUT/kernel/dtbs/qcom/khaje-qrd.dtb" \
-    "$OUT/kernel/dtbs/qcom/khaje-idp.dtb" \
+    "$OUT/kernel/dtbs/khaje.dtb" \
     "$OUT/kernel/dtbs/qcom/khaje.dtb" \
-    "$OUT/kernel/dtbs/khaje-hey.dtb" \
-    "$OUT/kernel/dtbs/khaje-qrd.dtb" \
     "$OUT/kernel/dtbs/khaje-idp.dtb" \
-    "$OUT/kernel/dtbs/khaje.dtb"; do
+    "$OUT/kernel/dtbs/khaje-qrd.dtb"; do
     [ -f "$cand" ] && DTB="$cand" && break
 done
 if [ -z "$DTB" ]; then
-    DTB=$(find "$OUT/kernel/dtbs" -name '*.dtb' | grep -iE 'khaje|hey' | head -1 || true)
+    DTB=$(find "$OUT/kernel/dtbs" -name '*.dtb' | grep -iE 'khaje' | head -1 || true)
 fi
 if [ -z "$DTB" ]; then
     DTB=$(find "$OUT/kernel/dtbs" -name '*.dtb' | head -1 || true)
 fi
-echo ">> using DTB: ${DTB:-<none>}"
+echo ">> base DTB: ${DTB:-<none>}"
+
+# 尝试把 HEY-W09 的 overlay (HEY_W09_VA, board-id 8280) 合并进 DTB,
+# 以获得正确的显示面板/触摸/板级配置。失败则回退基础 DTB。
+OVERLAY_DTS="kernel/arch/arm64/boot/dts/vendor/qcom/khaje/HEY/HEY_W09_VA/overlay.dts"
+MERGED_DTB="$OUT/kernel/dtbs/hey-w09-merged.dtb"
+if [ -n "$DTB" ] && [ -f "$OVERLAY_DTS" ] && command -v dtc >/dev/null 2>&1 && command -v fdtoverlay >/dev/null 2>&1; then
+    echo ">> merging HEY_W09_VA overlay into $DTB"
+    TMPD="$(mktemp -d)"
+    if (
+        cd kernel
+        # 复刻 kbuild cmd_dtc: cpp 预处理 (include-prefixes) -> dtc -@ 编译为 dtbo
+        cpp -nostdinc -Iscripts/dtc/include-prefixes -undef -D__DTS__ -x assembler-with-cpp \
+            "arch/arm64/boot/dts/vendor/qcom/khaje/HEY/HEY_W09_VA/overlay.dts" -o "$TMPD/overlay.dts.tmp" \
+        && dtc -@ -O dtb -o "$TMPD/hey_w09_va.dtbo" -b 0 \
+            -i"arch/arm64/boot/dts/vendor/qcom/khaje/HEY/HEY_W09_VA" \
+            -i"scripts/dtc/include-prefixes" \
+            "$TMPD/overlay.dts.tmp"
+    ) && fdtoverlay -i "$DTB" -o "$MERGED_DTB" "$TMPD/hey_w09_va.dtbo"; then
+        DTB="$MERGED_DTB"
+        echo ">> overlay merged -> $DTB"
+    else
+        echo ">> WARN: overlay merge failed, fallback to base DTB $DTB"
+    fi
+    rm -rf "$TMPD"
+else
+    echo ">> using base DTB (overlay unavailable): ${DTB:-<none>}"
+fi
 
 # SM6225 (khaje) 典型 boot header v2 偏移
 BASE="${BASE:-0x00000000}"
