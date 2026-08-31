@@ -41,6 +41,12 @@ echo ">> applying Debian-boot config fixes"
 # BOOST_KILL 是 Kconfig default y 的厂商项, 但其信号代码引用缺失的 extern 声明,
 # 且该"杀进程时提升到快速核"功能对本发行版无意义 -> 强制关闭
 ./scripts/config --disable BOOST_KILL
+# SMB1398 副充电器驱动 (仅高端机型), 本机(khaje) 不使用, 但其代码引用不存在的
+# POWER_SUPPLY_PROP_INPUT_CURRENT_MAX -> 关闭
+./scripts/config --disable SMB1398_CHARGER
+# 荣耀 lcdkit 面板框架: 头文件/工具在厂商树 vendor/honor/chipset_common 中,
+# 本内核 Release 不包含 -> 独立构建必须关闭 (dsi 代码有 #ifndef 回退路径)
+./scripts/config --disable LCD_KIT_DRIVER
 # 关闭 -Werror 类告警当错 (厂商在 clang 下无此问题, 独立构建保险起见)
 ./scripts/config --disable WERROR 2>/dev/null || true
 make CC="$CC_BIN" olddefconfig
