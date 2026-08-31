@@ -53,4 +53,23 @@ else
     echo "  SKIP (NOSTDINC_FLAGS 不存在)"
 fi
 
+echo ">> [patch 4/4] dsi_display.c: 无条件 lcdkit ESD 调用加 CONFIG_LCD_KIT_DRIVER 保护"
+python3 - <<'PYEOF'
+p = 'techpack/display/msm/dsi/dsi_display.c'
+s = open(p).read()
+old = '''	} else if (status_mode == ESD_MODE_PANEL_GPIO) {
+		rc = lcd_kit_dual_gpio_esd_check();
+	} else {'''
+new = '''	} else if (status_mode == ESD_MODE_PANEL_GPIO) {
+#ifdef CONFIG_LCD_KIT_DRIVER
+		rc = lcd_kit_dual_gpio_esd_check();
+#else
+		DSI_WARN("GPIO ESD check unsupported without lcdkit\\n");
+		panel->esd_config.esd_enabled = false;
+#endif
+	} else {'''
+assert old in s, "dsi_display.c patch anchor not found"
+open(p, 'w').write(s.replace(old, new))
+print("  OK dsi_display.c patched")
+PYEOF
 echo ">> vendor patches done"
