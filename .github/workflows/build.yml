@@ -1,0 +1,80 @@
+name: Build HEY-W09 Debian Linux (官方4.19)
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 240
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y \
+            clang-14 lld-14 \
+            binutils-aarch64-linux-gnu gcc-aarch64-linux-gnu \
+            flex bison bc cpio xz-utils zstd bzip2 \
+            libssl-dev libncurses-dev \
+            device-tree-compiler \
+            mkbootimg debootstrap qemu-user-static \
+            busybox-static dpkg-dev wget p7zip-full
+          # debootstrap 认识 Debian bookworm 发行版代号
+          sudo ln -sf /usr/share/debootstrap/scripts/sid /usr/share/debootstrap/scripts/bookworm 2>/dev/null || true
+
+      - name: Restore kernel build cache
+        id: cache-kernel
+        uses: actions/cache@v4
+        with:
+          path: |
+            out/kernel
+            out/modules-stage
+          key: hey-w09-k419-clang-${{ hashFiles('scripts/build-kernel-official.sh', 'scripts/patch-vendor-419.sh') }}
+
+      - name: Fetch official 4.19 kernel source
+        run: bash scripts/fetch-kernel-official.sh
+
+      - name: Build ARM64 kernel (clang)
+        run: bash scripts/build-kernel-official.sh
+
+      - name: Save kernel build cache
+        if: steps.cache-kernel.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            out/kernel
+            out/modules-stage
+          key: hey-w09-k419-clang-${{ hashFiles('scripts/build-kernel-official.sh', 'scripts/patch-vendor-419.sh') }}
+
+      - name: Build Debian arm64 rootfs (GNOME + Firefox)
+        run: bash scripts/build-rootfs.sh
+
+      - name: Build initramfs (busybox + init + WiFi)
+        run: bash scripts/build-initramfs.sh
+
+      - name: Build boot.img
+        run: bash scripts/build-bootimg.sh
+
+      - name: Assemble & compress release
+        run: bash scripts/assemble.sh
+
+      - name: Show output tree
+        run: find out -maxdepth 2 -type f -exec ls -lh {} \;
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: hey-w09-debian
+          path: out/
+          if-no-files-found: error
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: out/*
+          generate_release_notes: true
