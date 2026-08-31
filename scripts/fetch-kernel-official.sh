@@ -32,7 +32,11 @@ else
     SZ=".kernel-tmp/7zz"
 fi
 echo ">> extracting rar with $SZ"
-( cd .kernel-tmp && "$OLDPWD/$SZ" x -y source.rar >/dev/null 2>&1 || "$OLDPWD/$SZ" x -y source.rar )
+if [ "$SZ" = "7z" ] || [ "$SZ" = "7zz" ]; then
+    ( cd .kernel-tmp && "$SZ" x -y source.rar >/dev/null 2>&1 || "$SZ" x -y source.rar )
+else
+    ( cd .kernel-tmp && "$OLDPWD/$SZ" x -y source.rar >/dev/null 2>&1 || "$OLDPWD/$SZ" x -y source.rar )
+fi
 
 echo ">> extracting Code_Opensource.tar.gz"
 tar -xzf .kernel-tmp/Hendry-W09D_MagicUI6.1_Opensource/Code_Opensource.tar.gz -C .kernel-tmp
