@@ -8,13 +8,16 @@ jobs:
     steps:
       - name: Install dependencies
         run: |
+          sudo apt update
           sudo apt install -y pahole binutils git wget unzip unrar-nonfree make gcc-aarch64-linux-gnu libelf-dev dwarves
 
-      - name: Download NDK r27c
-        run: |
-          wget https://dl.google.com/android/repository/android-ndk-r27c-linux.zip
-          unzip -q android-ndk-r27c-linux.zip
-          echo "NDK_ROOT=$PWD/android-ndk-r27c" >> $GITHUB_ENV
+      - name: Setup NDK r27c (cached, fast)
+        uses: Ylarod/setup-ndk-clang@v1
+        with:
+          ndk-version: r27c
+        id: ndk
+      - name: Export NDK env
+        run: echo "NDK_ROOT=${{ steps.ndk.outputs.ndk-path }}" >> $GITHUB_ENV
 
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -44,8 +47,8 @@ jobs:
           pahole -C rt_mutex_waiter vmlinux > ../rt_mutex_waiter.txt
           nm vmlinux | grep -E "init_task|init_cred" > ../kallsyms.txt
 
-      - name: Clone GhostLock base source
-        run: git clone https://github.com/p2p3p/GhostLock-for-OnePlus.git ghostlock
+      - name: Clone GhostLock with ghproxy accelerate
+        run: git clone https://mirror.ghproxy.com/https://github.com/p2p3p/GhostLock-for-OnePlus.git ghostlock
 
       - name: Create device directory & generate offsets.h template
         run: |
