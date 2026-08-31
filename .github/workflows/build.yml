@@ -8,7 +8,6 @@ jobs:
     steps:
       - name: Install dependencies
         run: |
-          sudo apt update
           sudo apt install -y pahole binutils git wget unzip unrar-nonfree make gcc-aarch64-linux-gnu libelf-dev dwarves
 
       - name: Download NDK r27c
