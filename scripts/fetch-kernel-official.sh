@@ -5,7 +5,12 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 KERNEL_SRC="${KERNEL_SRC:-kernel}"
-RELEASE_URL="${RELEASE_URL:-https://github.com/HaQiMi-Din/hey-w09-linux/releases/download/kernel-source/HEY-W09_kernel_opensource.rar}"
+# 从 Release 动态获取官方源码包地址 (asset 可能被改名, 硬编码 URL 易 404)
+if [ -z "${RELEASE_URL:-}" ]; then
+    RELEASE_URL="$(curl -fsSL "https://api.github.com/repos/HaQiMi-Din/hey-w09-linux/releases/tags/kernel-source" \
+        | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['assets'][0]['browser_download_url'])")"
+fi
+echo ">> release url: $RELEASE_URL"
 
 if [ -f "$KERNEL_SRC/Makefile" ]; then
     echo ">> kernel source already present at $KERNEL_SRC"
