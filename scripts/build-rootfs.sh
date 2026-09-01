@@ -72,4 +72,4 @@ if [ -d "$OUT/modules-stage/lib/modules" ]; then
     sudo chroot "$ROOTFS" bash -c 'cd /lib/modules && for d in *; do [ -d "$d" ] && depmod -b / "$d" 2>/dev/null || true; done'
 fi
 echo ">> rootfs build done"
-du -sh "$ROOTFS"
+sudo du -sh "$ROOTFS" 2>/dev/null || du -sh "$ROOTFS" 2>/dev/null || true
