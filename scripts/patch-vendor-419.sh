@@ -143,15 +143,67 @@ open(p, 'w').write(s.replace(old_m, new_m))
 print("  OK coul_calibration.c power_nv_write weak stub")
 PYEOF
 echo ">> vendor patches done"
-echo ">> [patch 8/8] 硬剔除 cam_hiview (hiview 遥测模块源码缺失, 独立构建必失败)"
+echo ">> [patch 8/8] hiview 遥测模块实现缺失 -> 恢复 cam_hiview + 提供 no-op stub"
 python3 - <<'PYEOF'
+# 1) 恢复 cam_hiview 编译并加入 hiview_stub.o (cam_dmd_util 等依赖 cam_hiview_* API)
 p = 'techpack/camera/drivers/Makefile'
 s = open(p).read()
-old_m = 'obj-$(CONFIG_SPECTRA_CAMERA)      += cam_hiview/cam_hiview.o'
-new_m = ('# cam_hiview 依赖厂商私有 hiview 模块(源码缺失), 独立构建删除: hiview 仅为遥测上报, 无内核功能\n'
-         'obj-$(CONFIG_SPECTRA_CAMERA_DISABLED_HIVIEW) += cam_hiview/cam_hiview.o')
-assert old_m in s, "cam_hiview Makefile anchor not found"
-open(p, 'w').write(s.replace(old_m, new_m))
-print("  OK cam_hiview 已从构建剔除")
+a = 'obj-$(CONFIG_SPECTRA_CAMERA)      += cam_hiview/cam_hiview.o'
+if 'hiview_stub.o' not in s:
+    assert a in s, "cam_hiview Makefile anchor not found"
+    s = s.replace(a, a + '\nobj-$(CONFIG_SPECTRA_CAMERA)      += cam_hiview/hiview_stub.o')
+    open(p, 'w').write(s)
+    print("  OK cam_hiview + hiview_stub.o 已加入")
+else:
+    print("  OK 已含 hiview_stub.o")
+
+# 2) 写 no-op stub (hiview 仅事件上报, stub 不影响功能)
+stub = (
+    '/*\n'
+    ' * hiview 遥测模块(honor 私有内核组件)未随开源 Release 提供实现。\n'
+    ' * 独立构建下提供 no-op 实现, 保证 cam_hiview 等调用方可链接。\n'
+    ' */\n'
+    '#include <linux/types.h>\n'
+    '#include <log/hiview_hievent.h>\n'
+    '\n'
+    'struct hiview_hievent *hiview_hievent_create(unsigned int event_id)\n'
+    '{\n'
+    '\treturn NULL;\n'
+    '}\n'
+    '\n'
+    'int hiview_hievent_report(struct hiview_hievent *event)\n'
+    '{\n'
+    '\treturn 0;\n'
+    '}\n'
+    '\n'
+    'void hiview_hievent_destroy(struct hiview_hievent *event)\n'
+    '{\n'
+    '}\n'
+    '\n'
+    'int hiview_hievent_put_string(struct hiview_hievent *event,\n'
+    '\tconst char *key, const char *value)\n'
+    '{\n'
+    '\treturn 0;\n'
+    '}\n'
+    '\n'
+    'int hiview_hievent_put_integral(struct hiview_hievent *event,\n'
+    '\tconst char *key, long long value)\n'
+    '{\n'
+    '\treturn 0;\n'
+    '}\n'
+    '\n'
+    'int hiview_hievent_set_time(struct hiview_hievent *event, long long seconds)\n'
+    '{\n'
+    '\treturn 0;\n'
+    '}\n'
+    '\n'
+    'int hiview_hievent_add_file_path(struct hiview_hievent *event,\n'
+    '\tconst char *path)\n'
+    '{\n'
+    '\treturn 0;\n'
+    '}\n'
+)
+open('techpack/camera/drivers/cam_hiview/hiview_stub.c', 'w').write(stub)
+print("  OK hiview_stub.c 已写入")
 PYEOF
 echo ">> vendor patches done"
