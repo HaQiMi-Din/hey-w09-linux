@@ -143,3 +143,15 @@ open(p, 'w').write(s.replace(old_m, new_m))
 print("  OK coul_calibration.c power_nv_write weak stub")
 PYEOF
 echo ">> vendor patches done"
+echo ">> [patch 8/8] 硬剔除 cam_hiview (hiview 遥测模块源码缺失, 独立构建必失败)"
+python3 - <<'PYEOF'
+p = 'techpack/camera/drivers/Makefile'
+s = open(p).read()
+old_m = 'obj-$(CONFIG_SPECTRA_CAMERA)      += cam_hiview/cam_hiview.o'
+new_m = ('# cam_hiview 依赖厂商私有 hiview 模块(源码缺失), 独立构建删除: hiview 仅为遥测上报, 无内核功能\n'
+         'obj-$(CONFIG_SPECTRA_CAMERA_DISABLED_HIVIEW) += cam_hiview/cam_hiview.o')
+assert old_m in s, "cam_hiview Makefile anchor not found"
+open(p, 'w').write(s.replace(old_m, new_m))
+print("  OK cam_hiview 已从构建剔除")
+PYEOF
+echo ">> vendor patches done"
