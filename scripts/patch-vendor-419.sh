@@ -108,8 +108,7 @@ print("  OK arch/arm64/Makefile DTC_FLAGS")
 p = 'arch/arm64/boot/dts/vendor/qcom/Makefile'
 s = open(p).read()
 old_m = 'dtb-$(CONFIG_ARCH_KHAJE) += khaje-idp.dtb \\'
-new_m = 'dtb-$(CONFIG_ARCH_KHAJE) += khaje.dtb \\
-		khaje-idp.dtb \\'
+new_m = 'dtb-$(CONFIG_ARCH_KHAJE) += khaje.dtb \\' + chr(10) + '\t\tkhaje-idp.dtb \\'
 assert old_m in s, "khaje dtb-y anchor not found"
 open(p, 'w').write(s.replace(old_m, new_m))
 print("  OK qcom/Makefile khaje.dtb added")
