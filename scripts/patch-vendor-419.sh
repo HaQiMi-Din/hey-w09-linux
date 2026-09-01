@@ -207,18 +207,23 @@ open('techpack/camera/drivers/cam_hiview/hiview_stub.c', 'w').write(stub)
 print("  OK hiview_stub.c 已写入")
 PYEOF
 echo ">> vendor patches done"
-echo ">> [patch 9/9] 修复 modpost .mod.o 编译缺 arch include (asm/barrier.h not found)"
+echo ">> [patch 9/9] 修复 modpost .mod.o 编译缺 include (asm/barrier.h / uapi compat 符号)"
 python3 - <<'PYEOF'
 p = 'scripts/Makefile.modpost'
 s = open(p).read()
 old_m = ('      cmd_cc_o_c = $(CC) $(c_flags) $(KBUILD_CFLAGS_MODULE) $(CFLAGS_MODULE) \\\n'
          '\t\t   -c -o $@ $<')
-new_m = ('      cmd_cc_o_c = $(CC) $(c_flags) -I$(srctree)/arch/$(SRCARCH)/include \\\n'
+# 补全内核标准 include 路径集 (arch + generated + uapi + generated/uapi)
+new_m = ('      cmd_cc_o_c = $(CC) $(c_flags) \\\n'
+         '\t\t   -I$(srctree)/arch/$(SRCARCH)/include \\\n'
          '\t\t   -I$(objtree)/arch/$(SRCARCH)/include/generated \\\n'
+         '\t\t   -I$(srctree)/arch/$(SRCARCH)/include/uapi \\\n'
+         '\t\t   -I$(objtree)/arch/$(SRCARCH)/include/generated/uapi \\\n'
          '\t\t   -I$(srctree)/include -I$(objtree)/include/generated \\\n'
+         '\t\t   -I$(srctree)/include/uapi -I$(objtree)/include/generated/uapi \\\n'
          '\t\t   $(KBUILD_CFLAGS_MODULE) $(CFLAGS_MODULE) -c -o $@ $<')
-assert old_m in s, "modpost cmd_cc_o_c anchor not found"
+assert old_m in s, "modpost anchor not found"
 open(p, 'w').write(s.replace(old_m, new_m))
-print("  OK modpost .mod.o 已补 arch/include 路径")
+print("  OK modpost .mod.o 已补全 include 路径集")
 PYEOF
 echo ">> vendor patches done"
