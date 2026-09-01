@@ -228,3 +228,15 @@ open(p, 'w').write(s.replace(old_m, new_m))
 print("  OK modpost .mod.o 已补全 -D__KERNEL__ + autoconf.h + include 路径")
 PYEOF
 echo ">> vendor patches done"
+echo ">> [patch 10/10] iaware_qos.c: COMPAT=n 时补 linux/ioctl.h (_IOR/_IOW 原先靠 compat.h 间接引入)"
+python3 - <<'PYEOF'
+p = 'kernel/hwqos/iaware_qos.c'
+s = open(p).read()
+old_m = '#ifdef CONFIG_COMPAT\n#include <linux/compat.h>\n#endif'
+new_m = ('#include <linux/ioctl.h>\n'
+         '#ifdef CONFIG_COMPAT\n#include <linux/compat.h>\n#endif')
+assert old_m in s, "iaware_qos.c anchor not found"
+open(p, 'w').write(s.replace(old_m, new_m))
+print("  OK iaware_qos.c 已补 linux/ioctl.h")
+PYEOF
+echo ">> vendor patches done"
