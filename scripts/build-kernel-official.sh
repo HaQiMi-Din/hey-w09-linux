@@ -35,7 +35,7 @@ echo ">> applying Debian-boot config fixes"
   --enable DEVTMPFS --enable DEVTMPFS_MOUNT --enable TMPFS \
   --enable BLK_DEV_INITRD --enable RD_GZIP \
   --enable EXT4_FS --enable F2FS_FS --enable OVERLAY_FS \
-  --enable MODULES --enable MODULE_UNLOAD \
+  --disable MODULES \
   --enable SERIAL_MSM --enable SERIAL_MSM_CONSOLE \
   --enable INPUT_TOUCHSCREEN --enable BLK_DEV_LOOP --enable BINFMT_MISC
 # BOOST_KILL 是 Kconfig default y 的厂商项, 但其信号代码引用缺失的 extern 声明,
