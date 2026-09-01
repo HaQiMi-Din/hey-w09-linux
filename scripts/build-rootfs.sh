@@ -44,7 +44,7 @@ apt-get install -y \
   xserver-xorg xserver-xorg-video-fbdev xserver-xorg-input-libinput \
   pipewire pipewire-pulse wireplumber gstreamer1.0-pipewire \
   fonts-noto-cjk fonts-wqy-zenhei fonts-wqy-microhei \
-  firmware-linux firmware-ath11k firmware-atheros firmware-realtek firmware-iwlwifi \
+  firmware-linux firmware-atheros firmware-realtek firmware-iwlwifi \
   dbus-x11'
 # 验证 GNOME / gdm3 / firefox 确实装上, 避免静默降级
 sudo chroot "$ROOTFS" bash -c 'test -x /usr/bin/gnome-shell || { echo "ERROR: gnome-shell not installed"; exit 1; }'
