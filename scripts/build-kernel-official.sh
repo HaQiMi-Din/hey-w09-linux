@@ -49,6 +49,15 @@ echo ">> applying Debian-boot config fixes"
 ./scripts/config --disable LCD_KIT_DRIVER
 # 关闭 -Werror 类告警当错 (厂商在 clang 下无此问题, 独立构建保险起见)
 ./scripts/config --disable WERROR 2>/dev/null || true
+# ---- 链接期修复 ----
+# MODVERSIONS 的 __crc_ 符号 + clang/GNU ld 产生危险重定位; 独立系统无外部模块, 关闭
+./scripts/config --disable MODVERSIONS 2>/dev/null || true
+# GSI 驱动危险重定位 (__crc_gsi_* 无法在共享对象外解析)
+./scripts/config --disable GSI 2>/dev/null || true
+# 相机遥测 cam_hiview 依赖厂商私有 hiview 模块(源码缺失) -> 关掉整块相机栈
+./scripts/config --disable SPECTRA_CAMERA 2>/dev/null || true
+# 调试信息在 clang-14 + binutils 2.38 下产生 DWARF 警告并显著增大镜像, 关闭
+./scripts/config --disable DEBUG_INFO 2>/dev/null || true
 make CC="$CC_BIN" olddefconfig
 
 echo ">> building kernel (Image.gz + dtbs + modules) with $(nproc) cores [clang]"

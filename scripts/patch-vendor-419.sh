@@ -114,3 +114,32 @@ open(p, 'w').write(s.replace(old_m, new_m))
 print("  OK qcom/Makefile khaje.dtb added")
 PYEOF
 echo ">> vendor patches done"
+echo ">> [patch 7/7] 链接期修复: selinux_state 去 rtic 段 + power_nv_write stub"
+python3 - <<'PYEOF'
+# 1) selinux_state 被厂商标进 .bss.rtic, 该段放置导致 ADRP 重定位截断 -> 去掉属性回普通 .bss
+p = 'security/selinux/hooks.c'
+s = open(p).read()
+old_m = 'struct selinux_state selinux_state __rticdata;'
+new_m = 'struct selinux_state selinux_state;'
+assert old_m in s, "hooks.c selinux_state anchor not found"
+open(p, 'w').write(s.replace(old_m, new_m))
+print("  OK hooks.c selinux_state 去 __rticdata")
+
+# 2) power_nv_write 真源在 honor_platform_6225 (受 CONFIG_HONOR_POWER 门控未编译),
+#    coul_calibration 无条件引用 -> 补 weak stub (电量校准持久化非必需)
+p = 'drivers/honor_power/cc_coul/coul_calibration.c'
+s = open(p).read()
+old_m = 'static int coul_cali_save_data(void *dev_data)'
+new_m = ('#ifndef CONFIG_HONOR_POWER\n'
+         '__weak int power_nv_write(enum power_nv_type type, const void *data, uint32_t data_len)\n'
+         '{\n'
+         '\t/* power_nv 模块未编译, 电量校准数据不持久化 */\n'
+         '\treturn 0;\n'
+         '}\n'
+         '#endif\n'
+         'static int coul_cali_save_data(void *dev_data)')
+assert old_m in s, "coul_calibration.c anchor not found"
+open(p, 'w').write(s.replace(old_m, new_m))
+print("  OK coul_calibration.c power_nv_write weak stub")
+PYEOF
+echo ">> vendor patches done"

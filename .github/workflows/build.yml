@@ -64,6 +64,9 @@ jobs:
       - name: Build flashable zip (TWRP 卡刷包)
         run: bash scripts/build-flashable.sh
 
+      - name: Build 9008 EDL 线刷包
+        run: bash scripts/build-edl.sh
+
       - name: Show output tree
         run: find out -maxdepth 2 -type f -exec ls -lh {} \;
 
