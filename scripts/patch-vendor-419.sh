@@ -240,3 +240,14 @@ open(p, 'w').write(s.replace(old_m, new_m))
 print("  OK iaware_qos.c 已补 linux/ioctl.h")
 PYEOF
 echo ">> vendor patches done"
+echo ">> [patch 9/9] iaware_qos.c 缺 linux/fs.h -> struct file_operations 不完整类型"
+python3 - <<'PYEOF'
+p = 'kernel/hwqos/iaware_qos.c'
+s = open(p).read()
+old_m = '#include <linux/miscdevice.h>'
+new_m = '#include <linux/miscdevice.h>\n#include <linux/fs.h>'
+assert old_m in s, "iaware_qos.c anchor not found"
+open(p, 'w').write(s.replace(old_m, new_m, 1))
+print("  OK iaware_qos.c 已补 linux/fs.h")
+PYEOF
+echo ">> vendor patches done"
