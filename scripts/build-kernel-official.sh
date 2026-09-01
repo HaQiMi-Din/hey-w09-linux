@@ -71,11 +71,16 @@ make -j"$(nproc)" \
 # 修复 "asm/barrier.h file not found" (vendir 4.19 + clang 的 modpost include 路径问题)
 make CC="$CC_BIN" CLANG_TRIPLE=aarch64-linux-gnu- CROSS_COMPILE=aarch64-linux-gnu- \
      KCFLAGS="-Wno-error" prepare
-echo ">> building modules [clang]"
-make -j"$(nproc)" \
-     CC="$CC_BIN" CLANG_TRIPLE=aarch64-linux-gnu- CROSS_COMPILE=aarch64-linux-gnu- \
-     KCFLAGS="-Wno-error" \
-     modules
+# 仅当 CONFIG_MODULES=y 时构建模块 (无模块时 make modules 会主动报错)
+if grep -q '^CONFIG_MODULES=y' .config; then
+    echo ">> building modules [clang]"
+    make -j"$(nproc)" \
+         CC="$CC_BIN" CLANG_TRIPLE=aarch64-linux-gnu- CROSS_COMPILE=aarch64-linux-gnu- \
+         KCFLAGS="-Wno-error" \
+         modules
+else
+    echo ">> modules disabled in config, skipping module build"
+fi
 
 # ---- 产物收集 ----
 OUT_ABS="$(cd .. && pwd)/$OUT"
@@ -86,8 +91,12 @@ find arch/arm64/boot/dts -name '*.dtb' -exec cp -v {} "$OUT_ABS/kernel/dtbs/" \;
 cp -v .config "$OUT_ABS/kernel/hey-w09.config"
 echo ">> installing kernel modules into staging (out/modules-stage)"
 mkdir -p "$OUT_ABS/modules-stage"
-make modules_install INSTALL_MOD_PATH="$OUT_ABS/modules-stage" \
-     CC="$CC_BIN" CLANG_TRIPLE=aarch64-linux-gnu- CROSS_COMPILE=aarch64-linux-gnu-
+if grep -q '^CONFIG_MODULES=y' .config; then
+    make modules_install INSTALL_MOD_PATH="$OUT_ABS/modules-stage" \
+         CC="$CC_BIN" CLANG_TRIPLE=aarch64-linux-gnu- CROSS_COMPILE=aarch64-linux-gnu-
+else
+    echo ">> modules disabled, skipping modules_install"
+fi
 echo ">> kernel build done"
 ls -lh "$OUT_ABS/kernel/Image.gz"
 ls "$OUT_ABS/kernel/dtbs/" | head
