@@ -58,6 +58,8 @@ echo ">> applying Debian-boot config fixes"
 ./scripts/config --disable SPECTRA_CAMERA 2>/dev/null || true
 # 调试信息在 clang-14 + binutils 2.38 下产生 DWARF 警告并显著增大镜像, 关闭
 ./scripts/config --disable DEBUG_INFO 2>/dev/null || true
+# 关闭 32 位兼容层 (纯 arm64 Debian 不需要): 消除 modpost 中 __NR_compat_* 未定义
+./scripts/config --disable COMPAT 2>/dev/null || true
 make CC="$CC_BIN" olddefconfig
 
 echo ">> building kernel (Image.gz + dtbs) with $(nproc) cores [clang]"
