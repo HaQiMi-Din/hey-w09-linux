@@ -86,7 +86,7 @@ patch('arch/arm64/boot/dts/vendor/qcom/pm7250b.dtsi', [
     ('bcl_soc:bcl-soc {', 'pm7250b_bcl_soc:bcl-soc {'),
     ('thermal-sensors = <&bcl_soc>', 'thermal-sensors = <&pm7250b_bcl_soc>'),
 ])
-for _f in ['khaje-idp-pm7250b.dtsi', 'khaje-qrd-pm7250b.dtsi']:
+for _f in ['khaje-idp-pm7250b.dtsi', 'khaje-qrd-pm7250b.dtsi', 'khaje-atp.dtsi']:
     patch(f'arch/arm64/boot/dts/vendor/qcom/{_f}', [
         ('smb5_vbus: qcom,smb5-vbus {', 'pm7250b_smb5_vbus: qcom,smb5-vbus {'),
         ('vbus-supply = <&smb5_vbus>', 'vbus-supply = <&pm7250b_smb5_vbus>'),
