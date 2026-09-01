@@ -27,7 +27,7 @@ if [ ! -x "$BB_DIR/busybox" ]; then
         *.tar.gz) tar -xzf "$SRC_ARCHIVE" -C "$OUT" ;;
         *)        tar -xjf "$SRC_ARCHIVE" -C "$OUT" ;;
     esac
-    mv "$OUT"/busybox-${BB_VER} "$BB_DIR"
+    rm -rf "$BB_DIR" && mv "$OUT"/busybox-${BB_VER} "$BB_DIR"
     rm -f "$OUT/busybox-src.tar.bz2" "$OUT/busybox-src.tar.gz"
 fi
 
