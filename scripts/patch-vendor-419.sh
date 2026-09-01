@@ -92,4 +92,26 @@ for _f in ['khaje-idp-pm7250b.dtsi', 'khaje-qrd-pm7250b.dtsi']:
         ('vbus-supply = <&smb5_vbus>', 'vbus-supply = <&pm7250b_smb5_vbus>'),
     ])
 PYEOF
+echo ">> [patch 6/6] DTS: DTC_FLAGS 加 -Wno-duplicate_label + khaje.dtb 加入构建"
+python3 - <<'PYEOF'
+# 1) arch/arm64/Makefile: 厂商导出 DTC_FLAGS := -@, 新版 dtc 在 -@ 下把 duplicate_label
+#    当 ERROR (khaje-idp/qrd/atp 等测试板同时挂 pm7250b+pmi632 导致标签重复) -> 追加忽略
+p = 'arch/arm64/Makefile'
+s = open(p).read()
+old_m = 'export DTC_FLAGS := -@'
+new_m = 'export DTC_FLAGS := -@ -Wno-duplicate_label'
+assert old_m in s, "arch/arm64/Makefile DTC_FLAGS anchor not found"
+open(p, 'w').write(s.replace(old_m, new_m))
+print("  OK arch/arm64/Makefile DTC_FLAGS")
+
+# 2) qcom/Makefile: 把 khaje.dtb (真实设备基底, HEY_W09_VA overlay 合并用) 加进 dtb-y
+p = 'arch/arm64/boot/dts/vendor/qcom/Makefile'
+s = open(p).read()
+old_m = 'dtb-$(CONFIG_ARCH_KHAJE) += khaje-idp.dtb \\'
+new_m = 'dtb-$(CONFIG_ARCH_KHAJE) += khaje.dtb \\
+		khaje-idp.dtb \\'
+assert old_m in s, "khaje dtb-y anchor not found"
+open(p, 'w').write(s.replace(old_m, new_m))
+print("  OK qcom/Makefile khaje.dtb added")
+PYEOF
 echo ">> vendor patches done"
