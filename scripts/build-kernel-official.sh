@@ -60,11 +60,20 @@ echo ">> applying Debian-boot config fixes"
 ./scripts/config --disable DEBUG_INFO 2>/dev/null || true
 make CC="$CC_BIN" olddefconfig
 
-echo ">> building kernel (Image.gz + dtbs + modules) with $(nproc) cores [clang]"
+echo ">> building kernel (Image.gz + dtbs) with $(nproc) cores [clang]"
 make -j"$(nproc)" \
      CC="$CC_BIN" CLANG_TRIPLE=aarch64-linux-gnu- CROSS_COMPILE=aarch64-linux-gnu- \
      KCFLAGS="-Wno-error" \
-     Image.gz dtbs modules
+     Image.gz dtbs
+# 拆分构建: modpost 编译 .mod.o 前先重生成 generated headers / asm 符号链接,
+# 修复 "asm/barrier.h file not found" (vendir 4.19 + clang 的 modpost include 路径问题)
+make CC="$CC_BIN" CLANG_TRIPLE=aarch64-linux-gnu- CROSS_COMPILE=aarch64-linux-gnu- \
+     KCFLAGS="-Wno-error" prepare
+echo ">> building modules [clang]"
+make -j"$(nproc)" \
+     CC="$CC_BIN" CLANG_TRIPLE=aarch64-linux-gnu- CROSS_COMPILE=aarch64-linux-gnu- \
+     KCFLAGS="-Wno-error" \
+     modules
 
 # ---- 产物收集 ----
 OUT_ABS="$(cd .. && pwd)/$OUT"
