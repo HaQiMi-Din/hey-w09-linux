@@ -73,16 +73,31 @@ jobs:
       - name: Show output tree
         run: find out -maxdepth 2 -type f -exec ls -lh {} \;
 
-      - name: Upload artifacts
+      - name: Prepare release assets (权限修复 + 精简中间大文件)
+        run: |
+          sudo chmod -R a+rX out/rootfs out/flashable out/kernel out/initrd 2>/dev/null || true
+          rm -f out/rootfs.img out/hey-w09-limbo.img out/rootfs.tar.xz out/flashable/rootfs.img
+          rm -rf out/rootfs
+          ls -lh out/*.zip out/*.img out/boot.img 2>/dev/null || true
+      - name: Upload artifacts (小文件)
         uses: actions/upload-artifact@v4
         with:
-          name: hey-w09-debian
-          path: out/
+          name: hey-w09-assets
+          path: |
+            out/boot.img
+            out/hey-w09-flashable.zip
+            out/hey-w09-edl.zip
+            out/hey-w09-limbo.zip
+            out/README-LIMBO.txt
           if-no-files-found: error
-
-      - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: out/*
-          generate_release_notes: true
+          retention-days: 14
+      - name: Publish GitHub Release (大文件, 2GB/文件)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="v$(date +%Y%m%d.%H%M)"
+          gh release list --limit 20 | tail -n +4 | cut -f1 | xargs -r -I{} gh release delete {} --yes --cleanup-tag 2>/dev/null || true
+          NOTES="基于荣耀官方4.19内核 + Debian bookworm(GNOME+Firefox+apt/dpkg)。\n- hey-w09-flashable.zip: TWRP/橙狐 卡刷包\n- hey-w09-edl.zip: 9008(EDL)线刷包(rawprogram0.xml 偏移需按设备GPT校准)\n- hey-w09-limbo.zip: Limbo(QEMU)可引导 rootfs 磁盘镜像 + 配置说明\n- boot.img: 官方4.19内核 + busybox initrd (fastboot flash boot)\n登录: root/debian。"
+          gh release create "$TAG" \
+            out/boot.img out/hey-w09-flashable.zip out/hey-w09-edl.zip out/hey-w09-limbo.zip \
+            --repo ${GITHUB_REPOSITORY} --title "HEY-W09 Debian Linux (官方4.19) $TAG" --notes "$NOTES" || true
