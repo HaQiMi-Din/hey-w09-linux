@@ -7,13 +7,22 @@ export OUT="${OUT:-out}"
 ROOTFS="$OUT/rootfs"
 
 echo ">> compressing rootfs -> rootfs.tar.xz (xz -9, 可能较慢)"
-tar -C "$ROOTFS" -cJf "$OUT/rootfs.tar.xz" .
+# root 拥有目录(如 /root /var/cache)在非 root tar 下读不了会报错退出;
+# 用 sudo 打包保证完整, 失败时兜底忽略
+if sudo -n true 2>/dev/null; then
+    sudo tar -C "$ROOTFS" -cJf "$OUT/rootfs.tar.xz" . 2>/dev/null || {
+        echo ">> sudo tar 失败, 尝试普通 tar (忽略权限目录)"
+        tar -C "$ROOTFS" --warning=no-file-ignored -cJf "$OUT/rootfs.tar.xz" . 2>/dev/null || true
+    }
+else
+    tar -C "$ROOTFS" --warning=no-file-ignored -cJf "$OUT/rootfs.tar.xz" . 2>/dev/null || true
+fi
 ls -lh "$OUT/rootfs.tar.xz"
 
 # 生成可直接 fastboot flash 的 ext4 镜像(可选; 失败不阻断)
 if command -v mkfs.ext4 >/dev/null 2>&1 && command -v mount >/dev/null 2>&1; then
     echo ">> creating ext4 rootfs image (rootfs.img)"
-    ROOTFS_SIZE_MB=$(du -sm "$ROOTFS" | awk '{print int($1*1.25)+512}')
+    ROOTFS_SIZE_MB=$(sudo du -sm "$ROOTFS" 2>/dev/null | awk '{print int($1*1.25)+512}')
     echo "   target size: ${ROOTFS_SIZE_MB} MB"
     truncate -s "${ROOTFS_SIZE_MB}M" "$OUT/rootfs.img"
     mkfs.ext4 -F -L debian "$OUT/rootfs.img" >/dev/null
