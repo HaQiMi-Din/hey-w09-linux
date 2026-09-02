@@ -76,8 +76,9 @@ jobs:
       - name: Prepare release assets (权限修复 + 精简中间大文件)
         run: |
           sudo chmod -R a+rX out/rootfs out/flashable out/kernel out/initrd 2>/dev/null || true
-          rm -f out/rootfs.img out/hey-w09-limbo.img out/rootfs.tar.xz out/flashable/rootfs.img
-          rm -rf out/rootfs
+          # 精简中间大文件 (root-owned 需 sudo; 全部容错, 不阻断上传)
+          sudo rm -f out/rootfs.img out/hey-w09-limbo.img out/rootfs.tar.xz out/flashable/rootfs.img 2>/dev/null || true
+          sudo rm -rf out/rootfs 2>/dev/null || true
           ls -lh out/*.zip out/*.img out/boot.img 2>/dev/null || true
       - name: Upload artifacts (小文件)
         uses: actions/upload-artifact@v4
