@@ -3,7 +3,8 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-export OUT="${OUT:-out}"
+OUT="$(pwd)/${OUT:-out}"
+export OUT
 TMP="$OUT/initrd"
 rm -rf "$TMP"
 mkdir -p "$TMP"/{bin,sbin,dev,proc,sys,newroot,tmp,run,etc,lib,usr/bin,usr/sbin}
@@ -64,7 +65,7 @@ if [ -d "$OUT/rootfs/lib/firmware" ]; then
             mkdir -p "$FWDST/$(dirname "$f")"; \
             cp -v "$f" "$FWDST/$f"; \
         done ) 2>&1 | tail -5
-    echo "   -> initrd firmware size: $(du -sh "$FWDST" | awk '{print $1}')"
+    echo "   -> initrd firmware size: $(du -sh "$FWDST" 2>/dev/null | awk '{print $1}' || echo 0)"
 fi
 
 # 4) 打包 initrd.cpio.gz

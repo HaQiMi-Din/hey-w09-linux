@@ -21,7 +21,7 @@ jobs:
             flex bison bc cpio xz-utils zstd bzip2 \
             libssl-dev libncurses-dev \
             device-tree-compiler \
-            mkbootimg debootstrap qemu-user-static \
+            mkbootimg debootstrap qemu-user-static e2fsprogs zip \
             busybox-static dpkg-dev wget p7zip-full
           # debootstrap 认识 Debian bookworm 发行版代号
           sudo ln -sf /usr/share/debootstrap/scripts/sid /usr/share/debootstrap/scripts/bookworm 2>/dev/null || true
@@ -66,6 +66,9 @@ jobs:
 
       - name: Build 9008 EDL 线刷包
         run: bash scripts/build-edl.sh
+
+      - name: Build Limbo rootfs 磁盘镜像
+        run: bash scripts/build-limbo.sh
 
       - name: Show output tree
         run: find out -maxdepth 2 -type f -exec ls -lh {} \;
