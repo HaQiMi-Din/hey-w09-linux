@@ -53,8 +53,11 @@ sudo chroot "$ROOTFS" bash -c 'echo "QT_VIRTUALKEYBOARD=maliit" >> /etc/environm
 # 先在主机下载并去armor key, 再拷入 chroot, 避免 chroot 内网络/权限问题
 echo ">> adding Mozilla apt repo for Firefox (arm64)"
 wget -q https://packages.mozilla.org/apt/repo-signing-key.gpg -O /tmp/mozilla-repo-key.gpg
-gpg --batch --dearmor -o "$ROOTFS/usr/share/keyrings/packages.mozilla.org.gpg" /tmp/mozilla-repo-key.gpg
+gpg --batch --dearmor -o /tmp/packages.mozilla.org.gpg /tmp/mozilla-repo-key.gpg
 rm -f /tmp/mozilla-repo-key.gpg
+sudo mkdir -p "$ROOTFS/usr/share/keyrings"
+sudo cp -v /tmp/packages.mozilla.org.gpg "$ROOTFS/usr/share/keyrings/packages.mozilla.org.gpg"
+rm -f /tmp/packages.mozilla.org.gpg
 sudo tee "$ROOTFS/etc/apt/sources.list.d/mozilla.list" >/dev/null <<'MOZEOF'
 deb [signed-by=/usr/share/keyrings/packages.mozilla.org.gpg] https://packages.mozilla.org/apt mozilla main
 MOZEOF
