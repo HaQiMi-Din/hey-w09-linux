@@ -41,10 +41,74 @@ ls -l /dev/block/by-name/     # 看 boot / userdata 对应哪个 mmcblk0pXX
 
 > 注意:`/proc/partitions` 显示的是 **block 数(512B/block)**,起始值直接就是扇区号,很方便。
 
-### 方法 C:9008 模式 + firehose(无法进系统时)
+### 方法 C:9008 模式 + qdl 读 GPT(无 TWRP 首选,推荐)
 
-连接 9008 后用 QFIL/qdl 的 `qdl --storage emmc --print-gpt`(qdl 工具)或
-QFIL 的 "Read GPT" 功能导出分区表。此方法在设备完全黑屏时也能用,但需要先有 firehose 文件。
+**适用**:没有 TWRP、没解锁、设备进不了系统的全部场景。
+荣耀平板8 无官方解锁码,fastboot/TWRP 大概率不可用,这一条就是主路线。
+9008 模式是硬件级通道,不依赖 bootloader 解锁;读 GPT 与刷写都用同一个 firehose 文件。
+
+#### C-1. 获取 qdl 工具(Linux / WSL / macOS)
+
+qdl 是开源工具(linux-msm/qdl),Ubuntu/WSL 上编译:
+
+```sh
+sudo apt-get install -y libxml2-dev libusb-1.0-0-dev build-essential git
+git clone https://github.com/linux-msm/qdl.git
+cd qdl && make          # 生成 ./qdl 可执行文件
+```
+
+Windows 用户建议装 WSL(Ubuntu)后按上面步骤;或使用 QFIL 的 "Read GPT"(见 C-4)。
+
+#### C-2. 让设备进入 9008(EDL)模式
+
+不需要解锁、不需要 TWRP,任选其一:
+
+```sh
+# 方式1: 组合键(多数 khaje 机型有效)
+#   关机 -> 同时按住 音量上+下 -> 插 USB 数据线(保持按住直到电脑有反应)
+
+# 方式2: 已开机的 Android 里 adb 重启(需要开发者选项已开)
+adb reboot edl
+
+# 方式3: 拆机短接 EDL 测试点(前面板都试不出时;khaje 主板上通常有 EDL 触点,
+#        用镊子短接对应测试点到地,插线即可进 9008)
+```
+
+成功后设备管理器应出现 `Qualcomm HS-USB QDLoader 9008`(需要 QPST 驱动;
+Windows 首次插上若显示感叹号,去 QPST 安装目录装 Qualcomm USB Driver,必要时禁用驱动签名)。
+
+#### C-3. 用 qdl 读出真实 GPT
+
+```sh
+# 在 qdl 源码目录执行(prog_firehose_ddr.elf 放同目录):
+./qdl --storage emmc --print-gpt prog_firehose_ddr.elf
+
+# 或简短参数:
+./qdl -s emmc -g prog_firehose_ddr.elf
+```
+
+输出形如(实际数字以你的设备为准):
+
+```
+LUN 0:
+  #  start_sector   size_sectors   name
+  1        4096         2048      xbl
+  2        6144         2048      xbl_config
+  ...
+  8       24576        16384      boot
+  ...
+ 41     2000000     45875200     userdata
+```
+
+把 **boot 的 start_sector** 和 **userdata 的 start_sector** 抄下来,进第 4 节填表。
+
+> 若 `--print-gpt` 无输出或报错,先确认 9008 驱动正常、firehose 文件是 khaje/SM6225 专用。
+
+#### C-4. 没有 Linux 时:QFIL 的 "Read GPT"
+
+Windows 上打开 QFIL → Select Programmer 选 `prog_firehose_ddr.elf` →
+Tools 菜单 → "Read GPT"(或 Flat Build 界面下用 Read Back 功能),
+QFIL 会列出设备分区表,同样记下 boot / userdata 的起始扇区。
 
 ---
 
@@ -158,5 +222,7 @@ Number  Start (sector)  End (sector)  Size       Code  Name
 | 刷完进 Android 但没 Linux | boot 扇区写错,Android 的 boot 被覆盖或没生效 | 重新校准 boot 扇区重刷 |
 | rootfs.img 太大刷不进 | userdata size_in_KB 小于镜像 | 增大 size_in_KB 或先扩容 userdata |
 | 找不到 9008 驱动 | 缺 Qualcomm USB 驱动 | 装 QPST 自带驱动,或驱动签名禁用后安装 |
+| qdl 连不上设备 | 驱动没装好 / firehose 不匹配 | 重装 QPST 驱动;确认 firehose 是 khaje/SM6225 专用 |
+| 进不了 9008(组合键无效) | 机型批次差异 | 试 `adb reboot edl`;或拆机短接 EDL 测试点 |
 
 > 最后的保底:只要 9008 模式还能进、firehose 还在,砖就能救——从原厂固件全量刷回即可。
