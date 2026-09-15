@@ -77,6 +77,20 @@ boot.img (官方4.19内核+initrd) 与 rootfs.img (Kubuntu KDE 根文件系统)�
 4. 点击 Download / Flash
 5. 完成后设备重启进入 Linux (默认登录 root / debian)
 
+【GPT 校准详细步骤】(重要, 请严格照做)
+1. 获取设备真实分区表 (任选其一):
+   - TWRP/橙狐: Advanced->Terminal 执行 `sgdisk --print /dev/block/mmcblk0`
+   - root 的 Android: `cat /proc/partitions` + `ls -l /dev/block/by-name/`
+   - 9008+qdl: `qdl --storage emmc --print-gpt`
+2. 记下两个分区的"起始扇区(Start sector)": boot 和 userdata。
+3. 编辑本目录 rawprogram0.xml:
+   - boot.img 行: num_partition_sectors = boot 起始扇区
+   - rootfs.img 行: num_partition_sectors = userdata 起始扇区
+   - start_byte_as_string = 起始扇区 x 512 的十六进制 (hex:0x...)
+   - size_in_KB: userdata 不得小于 rootfs.img 实际大小 (8.6GB)
+4. 换算十六进制: python3 -c "print(hex(起始扇区*512))"
+5. 详细图文步骤见仓库 docs/gpt-calibration.md
+
 【替代方案】
 - 官方 Rec 只接受荣耀签名包, 无法直刷。
 - 推荐: 解锁 bootloader 后 TWRP 卡刷 (hey-w09-flashable.zip) 或 fastboot 直刷。
