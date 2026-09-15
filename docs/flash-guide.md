@@ -1,4 +1,4 @@
-# 刷入指南 (HEY-W09 → Debian + KDE)
+# 刷入指南 (HEY-W09 → Kubuntu + KDE)
 
 > 前提: 已获取 bootloader 解锁或等效的绕过手段。未解锁时以下操作不可执行。
 > 风险自负, 先备份。

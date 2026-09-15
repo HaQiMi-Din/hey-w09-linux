@@ -56,7 +56,7 @@ cat > "$DEST/README-9008.txt" <<'EOF'
 HEY-W09 (荣耀平板8 / khaje) 9008 线刷包
 ======================================
 本包用于在高通 9008 (EDL / Emergency Download) 模式下, 通过 QFIL 或 qdl 刷入
-boot.img (官方4.19内核+initrd) 与 rootfs.img (Debian GNOME 根文件系统)。
+boot.img (官方4.19内核+initrd) 与 rootfs.img (Kubuntu KDE 根文件系统)。
 
 【重要 - 刷前必读】
 1. 9008 模式进入: 关机后按住 音量上+下 同时插 USB; 或已 root 时 `adb reboot edl`。

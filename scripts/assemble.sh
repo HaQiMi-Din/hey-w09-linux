@@ -25,7 +25,7 @@ if command -v mkfs.ext4 >/dev/null 2>&1 && command -v mount >/dev/null 2>&1; the
     ROOTFS_SIZE_MB=$(sudo du -sm "$ROOTFS" 2>/dev/null | awk '{print int($1*1.25)+512}')
     echo "   target size: ${ROOTFS_SIZE_MB} MB"
     truncate -s "${ROOTFS_SIZE_MB}M" "$OUT/rootfs.img"
-    mkfs.ext4 -F -L debian "$OUT/rootfs.img" >/dev/null
+    mkfs.ext4 -F -L kubuntu "$OUT/rootfs.img" >/dev/null
     mkdir -p /tmp/rootfs-mnt
     sudo mount -o loop "$OUT/rootfs.img" /tmp/rootfs-mnt
     sudo cp -a "$ROOTFS"/. /tmp/rootfs-mnt/

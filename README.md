@@ -2,14 +2,14 @@
 
 把 **荣耀平板8 (Honor Pad 8, HEY-W09, Snapdragon 680 / SM6225 / khaje, arm64)** 变成一台完整 Linux 平板。
 
-方案参考「小米平板运行 deepin」：使用 **荣耀官方 4.19 内核**(自带全部厂商驱动：触摸、WiFi、Adreno GPU、显示), 配 Debian rootfs + 自定义 initrd 引导, 经 GitHub Actions 云端编译打包成可刷写的 `boot.img`。
+方案参考「小米平板运行 deepin」：使用 **荣耀官方 4.19 内核**(自带全部厂商驱动：触摸、WiFi、Adreno GPU、显示), 配 Kubuntu rootfs + 自定义 initrd 引导, 经 GitHub Actions 云端编译打包成可刷写的 `boot.img`。
 
 ## 产物
 
 | 文件 | 说明 |
 |---|---|
 | `boot.img` | 官方 4.19 内核 + HEY-W09 DTB + busybox initrd (fastboot 刷 boot 分区) |
-| `rootfs.img` | Debian bookworm (GNOME + Firefox + apt/dpkg) ext4 镜像 (刷 data/rootfs 分区) |
+| `rootfs.img` | Kubuntu noble (KDE Plasma + Firefox + apt/dpkg) ext4 镜像 (刷 data/rootfs 分区) |
 | `rootfs.tar.xz` | rootfs 压缩包 |
 | `initrd.cpio.gz` | initrd (busybox + init + WiFi 模块/固件) |
 
@@ -18,7 +18,7 @@
 - **内核**: 荣耀官方 Linux 4.19.157 (`Hendry-W09D_MagicUI6.1_Opensource`), 配置 `vendor/bengal_defconfig` (CONFIG_ARCH_KHAJE=y), **clang 交叉编译**(厂商官方 LLVM=1 工具链)
 - **引导**: `boot.img` (header v2, os 12.0.0), initrd 由静态 busybox + init 组成
 - **init 流程**: mount proc→/proc, sysfs→/sys, dev(优先 devtmpfs, 缺失则 tmpfs+mdev)→/dev → 加载 WiFi 模块(ath10k/ath11k/wcn36xx) → 定位 PARTLABEL=debian 根分区 → switch_root → systemd
-- **rootfs**: Debian **bookworm** arm64, 包管理 **apt/dpkg**, 桌面 **GNOME** (gdm3), 浏览器 **Firefox (firefox-esr)**, NetworkManager, WiFi 固件, 中文字体; root 密码 `debian`
+- **rootfs**: Kubuntu **noble** arm64, 包管理 **apt/dpkg**, 桌面 **KDE Plasma** (gdm3), 浏览器 **Firefox (firefox-esr)**, NetworkManager, WiFi 固件, 中文字体; root 密码 `debian`
 
 ## 云端构建 (GitHub Actions)
 
@@ -53,4 +53,4 @@ fastboot flash rootfs rootfs.img   # 分区名按机型实际布局调整
 
 - 触摸: 官方 4.19 内核 + HEY-W09 overlay DTB 应用后可望可用(正在接入 overlay 合并)
 - WiFi: 模块加载已接入 initrd, 固件来自 linux-firmware
-- GPU: Adreno 驱动随官方内核自带, GNOME Wayland 可加速
+- GPU: Adreno 驱动随官方内核自带, KDE Plasma Wayland 可加速

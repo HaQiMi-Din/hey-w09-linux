@@ -18,7 +18,7 @@ cp -v "$OUT/boot.img" "$DEST/" 2>/dev/null || { echo "ERROR: boot.img 不存在"
 # 2) shell update-binary (TWRP/OrangeFox 通用, 无需 edify 二进制)
 cat > "$DEST/META-INF/com/google/android/update-binary" <<'SBIN'
 #!/sbin/sh
-# HEY-W09 Linux (Debian + GNOME) 卡刷包
+# HEY-W09 Linux (Kubuntu + KDE Plasma) 卡刷包
 OUTFD=$1
 ZIPFILE=$2
 ui_print() { echo "ui_print $1" 1>&"$OUTFD"; echo "ui_print" 1>&"$OUTFD"; }
@@ -34,7 +34,7 @@ find_block() {
 }
 
 ui_print "=============================="
-ui_print " HEY-W09 Linux (Debian+GNOME)"
+ui_print " HEY-W09 Linux (Kubuntu+KDE Plasma)"
 ui_print " 官方4.19内核 + busybox initrd"
 ui_print "=============================="
 
@@ -58,13 +58,13 @@ else
     ui_print "ERROR: 未找到 boot 分区或 boot.img!"
 fi
 
-ROOTFS=$(find_block rootfs debian data userdata)
+ROOTFS=$(find_block rootfs kubuntu data userdata)
 if [ -n "$ROOTFS" ] && [ -f /tmp/hey/rootfs.img ]; then
     ui_print "刷入 rootfs.img -> $ROOTFS"
     dd if=/tmp/hey/rootfs.img of="$ROOTFS" bs=4096 2>/dev/null || dd if=/tmp/hey/rootfs.img of="$ROOTFS"
     sync
-    # 设置 ext4 卷标 debian, 供 initrd 定位根分区
-    tune2fs -L debian "$ROOTFS" 2>/dev/null || true
+    # 设置 ext4 卷标 kubuntu, 供 initrd 定位根分区
+    tune2fs -L kubuntu "$ROOTFS" 2>/dev/null || true
 else
     ui_print "WARN: 未找到 rootfs 目标分区, 请用 fastboot flash rootfs rootfs.img"
 fi
@@ -88,7 +88,7 @@ HEY-W09 (荣耀平板8) Linux 卡刷包
 =================================
 - 本包需在 TWRP / OrangeFox 等第三方 Recovery 中刷入。
 - 荣耀官方 Rec 只接受荣耀私钥签名的包, 本包无法通过其签名校验。
-- 刷入内容: boot.img (官方4.19内核+initrd) + rootfs.img (Debian GNOME) -> data/userdata 分区
+- 刷入内容: boot.img (官方4.19内核+initrd) + rootfs.img (Kubuntu KDE) -> data/userdata 分区
 - 前置条件: 已解锁 bootloader。
 - 没有 TWRP 时可用 fastboot:
     fastboot flash boot boot.img
