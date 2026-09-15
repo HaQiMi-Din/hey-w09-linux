@@ -226,3 +226,97 @@ Number  Start (sector)  End (sector)  Size       Code  Name
 | 进不了 9008(组合键无效) | 机型批次差异 | 试 `adb reboot edl`;或拆机短接 EDL 测试点 |
 
 > 最后的保底:只要 9008 模式还能进、firehose 还在,砖就能救——从原厂固件全量刷回即可。
+
+
+---
+
+## 8. 无 TWRP / 无 Linux 的 Windows 用户:QFIL 专版完整流程
+
+适用:只有 Windows 电脑、设备无 TWRP、无 root、无解锁码。整条路全程用 QFIL(Qualcomm 官方工具)完成。
+
+### 8.1 准备软件
+
+```text
+1. QPST 工具包(含 QFIL) — Qualcomm 官方,搜 "QPST download"
+   安装后: C:\Program Files (x86)\Qualcomm\QPST\bin\QFIL.exe
+2. 高通 USB 驱动 — QPST 自带;若设备管理器 9008 显示感叹号,
+   在驱动属性里"更新驱动->手动->从 QPST 驱动目录"安装,
+   必要时开机按 F8 禁用驱动签名强制安装
+```
+
+### 8.2 从官方固件包提取 firehose(必需,别跳过)
+
+```text
+1. 下载荣耀平板8 (HEY-W09) 官方固件包:
+   荣耀官网支持页 / 固件站搜索 "HEY-W09 固件" 得到 update.app 或 .hwr 包
+2. 解包工具任选:
+   - HuaweiUpdateExtractor (Windows GUI, 最省事)
+   - 或 Python 的 hwupdate 解包脚本
+3. 解包后找: prog_firehose_ddr.elf 或含 "firehose" 字样的文件
+   (可能在根目录或 recovery 相关目录)
+4. 验证型号: 文件名/内部应含 khaje 或 SM6225 相关标识
+5. 把 prog_firehose_ddr.elf 单独放一个文件夹, 例如 C:\hey-w09\
+```
+
+> 如果官方包解不出 firehose(部分荣耀包只含 update.app 系统镜像),
+> 换思路: 下载同芯片(骁龙680/khaje)其它品牌机型的线刷包,
+> 提取其中的 prog_firehose_ddr.elf(跨品牌同名加载器通常兼容, 需实测)。
+
+### 8.3 设备进 9008
+
+```text
+关机 -> 同时按住 音量上 + 音量下 -> 插 USB 线(保持按住直到电脑有反应)
+设备管理器出现 "Qualcomm HS-USB QDLoader 9008" 即成功
+```
+
+> 组合键无效时: 设备已开机可试 `adb reboot edl`(需 USB 调试);
+> 再不行需拆机, 在主板 EDL 测试点短接(镊子点到地)再插线。
+
+### 8.4 QFIL 读 GPT(代替 qdl, 不需要命令行)
+
+```text
+1. 打开 QFIL
+2. Select Programmer -> 选 C:\hey-w09\prog_firehose_ddr.elf
+   加载成功后 QFIL 显示 "Sahara protocol" 完成并连上设备
+3. 菜单 Tools -> "Read GPT" (或 Flat Build 界面勾选 Read GPT)
+4. 弹出窗口显示设备分区表, 找到:
+     boot     的 start sector
+     userdata 的 start sector
+   截图保存! 这两个数字就是校准依据
+```
+
+### 8.5 (可选)用 QFIL Read Back 提取/备份原厂固件
+
+```text
+1. Tools -> Read Back
+2. Add -> 填分区起始扇区 + 扇区长度(从 8.4 的 GPT 表抄)
+   boot 示例: Start 24576, Sectors 16384
+   userdata 示例: Start 2000000, Sectors 45875200(填完整分区)
+3. 生成 ReadBack.xml, 点 "Read Back" 开始导出
+4. 保存的 .bin/.img 就是原厂分区镜像(备份/提取用)
+```
+
+> Read Back 也可以直接整片备份(GPT 表里的总扇区数),
+> 这就是"从 9008 提取固件"的标准做法。
+
+### 8.6 校准 rawprogram0.xml 并刷入
+
+```text
+1. 用记事本打开 hey-w09-edl/rawprogram0.xml
+2. 把 8.4 读到的两个 start sector 填入:
+   boot.img 行    -> num_partition_sectors = boot 起始扇区
+   rootfs.img 行  -> num_partition_sectors = userdata 起始扇区
+   start_byte_as_string = hex(起始扇区 x 512)
+   不会换算: 用 Windows 计算器(程序员模式) 或 python3 -c "print(hex(24576*512))"
+3. QFIL: Flat Build -> 添加 rawprogram0.xml + patch0.xml
+4. 点 Download, 等待完成, 设备重启进 Kubuntu (登录 root / debian)
+```
+
+### 8.7 Windows 常见坑
+
+| 现象 | 原因 | 处理 |
+|---|---|---|
+| 9008 设备管理器是黄叹号 | 驱动没装/签名拦截 | 禁用驱动签名后装 QPST 驱动 |
+| QFIL 卡在 Sahara | firehose 与设备不匹配 | 换 khaje/SM6225 专用 firehose |
+| Read GPT 空白/报错 | firehose 无读权限或版本旧 | 换新版本 firehose 重试 |
+| Read Back 导出中断 | USB 线/口供电不稳 | 换原装线、插主板 USB 口 |
