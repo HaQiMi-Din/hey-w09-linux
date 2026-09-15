@@ -40,12 +40,15 @@ sudo chroot "$ROOTFS" apt-get update -y
 sudo chroot "$ROOTFS" bash -c 'export DEBIAN_FRONTEND=noninteractive
 apt-get install -y \
   kde-plasma-desktop sddm plasma-nm konsole dolphin kate discover \
+  maliit-keyboard onboard \
   network-manager \
   xserver-xorg xserver-xorg-video-fbdev xserver-xorg-input-libinput \
   pipewire pipewire-pulse wireplumber \
   fonts-noto-cjk fonts-wqy-zenhei fonts-wqy-microhei \
   linux-firmware \
   dbus-x11'
+# 启用 Maliit 虚拟键盘 (KDE/Plasma 触摸输入)
+sudo chroot "$ROOTFS" bash -c 'echo "QT_VIRTUALKEYBOARD=maliit" >> /etc/environment'
 # Firefox: Ubuntu 的 firefox 是 snap 过渡包(容器内不可用), 改用 Mozilla 官方 apt 仓库 (支持 arm64 deb)
 sudo chroot "$ROOTFS" bash -c 'export DEBIAN_FRONTEND=noninteractive
 wget -q https://packages.mozilla.org/apt/repo-signing-key.gpg -O- | gpg --dearmor > /usr/share/keyrings/packages.mozilla.org.gpg
