@@ -50,9 +50,15 @@ apt-get install -y \
 # 启用 Maliit 虚拟键盘 (KDE/Plasma 触摸输入)
 sudo chroot "$ROOTFS" bash -c 'echo "QT_VIRTUALKEYBOARD=maliit" >> /etc/environment'
 # Firefox: Ubuntu 的 firefox 是 snap 过渡包(容器内不可用), 改用 Mozilla 官方 apt 仓库 (支持 arm64 deb)
+# 先在主机下载并去armor key, 再拷入 chroot, 避免 chroot 内网络/权限问题
+echo ">> adding Mozilla apt repo for Firefox (arm64)"
+wget -q https://packages.mozilla.org/apt/repo-signing-key.gpg -O /tmp/mozilla-repo-key.gpg
+gpg --batch --dearmor -o "$ROOTFS/usr/share/keyrings/packages.mozilla.org.gpg" /tmp/mozilla-repo-key.gpg
+rm -f /tmp/mozilla-repo-key.gpg
+sudo tee "$ROOTFS/etc/apt/sources.list.d/mozilla.list" >/dev/null <<'MOZEOF'
+deb [signed-by=/usr/share/keyrings/packages.mozilla.org.gpg] https://packages.mozilla.org/apt mozilla main
+MOZEOF
 sudo chroot "$ROOTFS" bash -c 'export DEBIAN_FRONTEND=noninteractive
-wget -q https://packages.mozilla.org/apt/repo-signing-key.gpg -O- | gpg --dearmor > /usr/share/keyrings/packages.mozilla.org.gpg
-echo "deb [signed-by=/usr/share/keyrings/packages.mozilla.org.gpg] https://packages.mozilla.org/apt mozilla main" > /etc/apt/sources.list.d/mozilla.list
 apt-get update -y && apt-get install -y firefox'
 # 验证 Plasma / sddm / firefox 确实装上, 避免静默降级
 sudo chroot "$ROOTFS" bash -c 'test -x /usr/bin/plasma_session || { echo "ERROR: plasma_session not installed"; exit 1; }'
