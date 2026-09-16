@@ -100,26 +100,26 @@ jobs:
             rm -f "$f"
           done
           cat > out/split/MERGE.txt <<'EOF'
-============================================
- HOW TO MERGE SPLIT VOLUMES (合并分卷方法)
-============================================
-Each large file was split into 1800MB volumes (<2GB, GitHub Release limit).
-Download ALL volumes of the same name (e.g. hey-w09-flashable.zip.000/.001/.002)
-into one folder, then merge:
+          ============================================
+           HOW TO MERGE SPLIT VOLUMES (合并分卷方法)
+          ============================================
+          Each large file was split into 1800MB volumes (<2GB, GitHub Release limit).
+          Download ALL volumes of the same name (e.g. hey-w09-flashable.zip.000/.001/.002)
+          into one folder, then merge:
 
-[Linux / macOS]
-  cat hey-w09-flashable.zip.0* > hey-w09-flashable.zip
-  cat hey-w09-edl.zip.0* > hey-w09-edl.zip
+          [Linux / macOS]
+            cat hey-w09-flashable.zip.0* > hey-w09-flashable.zip
+            cat hey-w09-edl.zip.0* > hey-w09-edl.zip
 
-[Windows (cmd)]
-  copy /b hey-w09-flashable.zip.000 + hey-w09-flashable.zip.001 + hey-w09-flashable.zip.002 hey-w09-flashable.zip
-  copy /b hey-w09-edl.zip.000 + hey-w09-edl.zip.001 + hey-w09-edl.zip.002 hey-w09-edl.zip
+          [Windows (cmd)]
+            copy /b hey-w09-flashable.zip.000 + hey-w09-flashable.zip.001 + hey-w09-flashable.zip.002 hey-w09-flashable.zip
+            copy /b hey-w09-edl.zip.000 + hey-w09-edl.zip.001 + hey-w09-edl.zip.002 hey-w09-edl.zip
 
-(Use the exact volume names you downloaded; 003/... if more volumes exist.)
-Then verify with: sha256sum <file> (or certutil -hashfile <file> SHA256 on Windows)
-Boot.img is a single small file, no merging needed.
-============================================
-EOF
+          (Use the exact volume names you downloaded; 003/... if more volumes exist.)
+          Then verify with: sha256sum <file> (or certutil -hashfile <file> SHA256 on Windows)
+          Boot.img is a single small file, no merging needed.
+          ============================================
+          EOF
           ls -lh out/split/
       - name: Publish GitHub Release (分卷, 每卷<2GB 可免登录下载)
         env:
