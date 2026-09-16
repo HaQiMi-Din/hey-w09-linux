@@ -90,13 +90,45 @@ jobs:
             out/hey-w09-edl.zip
           if-no-files-found: error
           retention-days: 14
-      - name: Publish GitHub Release (大文件, 2GB/文件)
+      - name: Split large zips into <2GB volumes (Release 单文件上限2GB)
+        run: |
+          mkdir -p out/split
+          for f in out/hey-w09-flashable.zip out/hey-w09-edl.zip; do
+            base=$(basename "$f")
+            echo ">> splitting $f ..."
+            split -b 1800M -d -a 3 "$f" "out/split/${base}."
+            rm -f "$f"
+          done
+          cat > out/split/MERGE.txt <<'EOF'
+============================================
+ HOW TO MERGE SPLIT VOLUMES (合并分卷方法)
+============================================
+Each large file was split into 1800MB volumes (<2GB, GitHub Release limit).
+Download ALL volumes of the same name (e.g. hey-w09-flashable.zip.000/.001/.002)
+into one folder, then merge:
+
+[Linux / macOS]
+  cat hey-w09-flashable.zip.0* > hey-w09-flashable.zip
+  cat hey-w09-edl.zip.0* > hey-w09-edl.zip
+
+[Windows (cmd)]
+  copy /b hey-w09-flashable.zip.000 + hey-w09-flashable.zip.001 + hey-w09-flashable.zip.002 hey-w09-flashable.zip
+  copy /b hey-w09-edl.zip.000 + hey-w09-edl.zip.001 + hey-w09-edl.zip.002 hey-w09-edl.zip
+
+(Use the exact volume names you downloaded; 003/... if more volumes exist.)
+Then verify with: sha256sum <file> (or certutil -hashfile <file> SHA256 on Windows)
+Boot.img is a single small file, no merging needed.
+============================================
+EOF
+          ls -lh out/split/
+      - name: Publish GitHub Release (分卷, 每卷<2GB 可免登录下载)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="v$(date +%Y%m%d.%H%M)"
           gh release list --limit 20 | tail -n +4 | cut -f1 | xargs -r -I{} gh release delete {} --yes --cleanup-tag 2>/dev/null || true
-          NOTES="基于荣耀官方4.19内核 + Kubuntu 24.04 (KDE Plasma+Firefox+apt/dpkg)。\n- hey-w09-flashable.zip: TWRP/橙狐 卡刷包\n- hey-w09-edl.zip: 9008(EDL)线刷包(rawprogram0.xml 偏移需按设备GPT校准)\n- boot.img: 官方4.19内核 + busybox initrd (fastboot flash boot)\n登录: root/debian。"
+          NOTES="基于荣耀官方4.19内核 + Kubuntu 24.04 (KDE Plasma+Firefox+apt/dpkg)。\n- hey-w09-flashable.zip: TWRP/橙狐 卡刷包 (拆分为 .000/.001/.002 分卷, 下载全部后按 MERGE.txt 合并)\n- hey-w09-edl.zip: 9008(EDL)线刷包 (同上分卷; rawprogram0.xml 偏移需按设备GPT校准)\n- boot.img: 官方4.19内核 + busybox initrd (fastboot flash boot)\n- MERGE.txt: 分卷合并说明\n登录: root/debian。"
           gh release create "$TAG" \
-            out/boot.img out/hey-w09-flashable.zip out/hey-w09-edl.zip \
+            out/boot.img out/split/MERGE.txt \
+            $(ls out/split/*.zip.0* 2>/dev/null | sort) \
             --repo ${GITHUB_REPOSITORY} --title "HEY-W09 Kubuntu Linux (官方4.19) $TAG" --notes "$NOTES" || true
